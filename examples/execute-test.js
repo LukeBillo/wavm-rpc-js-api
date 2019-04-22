@@ -3,7 +3,7 @@ const { performance } = require('perf_hooks');
 
 async function executeTest() {
     const startBeforeInit = performance.now();
-    const success = await WebAssembly.Initialise("/home/luke/Documents/c++-wasm-files/wasm/basic-functions-precomp.wasm", true)
+    const success = await WebAssembly.Initialise(`${__dirname}/../wasm-examples/basic-functions-precomp.wasm`, true)
 
     if (!success) {
         console.log("Failed to initialise WAVM. Exiting..");
