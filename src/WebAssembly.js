@@ -16,14 +16,14 @@ let commandQueue = [];
 
 function constructNextCommandChain(index, commandQueue, finalCommand) {
     if (index === commandQueue.length) {
-        return function() {
+        return function () {
             return finalCommand;
         }
     }
 
     const nextInChain = constructNextCommandChain(index + 1, commandQueue, finalCommand);
 
-    return function() {
+    return function () {
         return Control_Bind.discard(Control_Bind.discardUnit)(ZeroMQ.bindRemote)(commandQueue[index])(nextInChain);
     }
 }
@@ -39,31 +39,8 @@ function buildCommandChain(finalCommand) {
     }
 }
 
-// Promise<bool> - send immediately
-function Init(moduleFile, isPrecompiled) {
-    let commandChain = buildCommandChain(ZeroMQ.init(moduleFile)(isPrecompiled));
-
-    commandQueue = [];
-
-    return Control_Promise.fromAff(
-        (ZeroMQ.send(endpoint)
-            (commandChain)
-        )
-    )().then(r => r === "Initialised");
-}
-
-// Promise<any> - send immediately
-function Execute(functionName, ...args) {
-    let stringifedArgs = '';
-
-    if (args) {
-        for (let arg of args) {
-            stringifedArgs += ` ${arg}`;
-        }
-    }
-
-    let commandChain = buildCommandChain(ZeroMQ.execute(`${functionName}${stringifedArgs}`));
-
+function runCommandChain(lastCommand) {
+    let commandChain = buildCommandChain(lastCommand);
     commandQueue = [];
 
     return Control_Promise.fromAff(
@@ -73,8 +50,7 @@ function Execute(functionName, ...args) {
     )();
 }
 
-// Promise<void> - not sent immediately unless specified
-function Void(functionName,...args, executeImmediately) {
+function stringifyArgs(args) {
     let stringifedArgs = '';
 
     if (args) {
@@ -83,20 +59,32 @@ function Void(functionName,...args, executeImmediately) {
         }
     }
 
-    if (executeImmediately) {
-        let commandChain = buildCommandChain(ZeroMQ.void(`${functionName}${stringifedArgs}`));
+    return stringifedArgs;
+}
 
-        commandQueue = [];
+// Promise<bool> - send immediately
+function Init(moduleFile, isPrecompiled) {
+    return runCommandChain(ZeroMQ.init(moduleFile)(isPrecompiled))
+           .then(r => r === "Initialised");;
+}
 
-        return Control_Promise.fromAff(
-            (ZeroMQ.send(endpoint)
-                (commandChain)
-            )
-        )();
-    }
+// Promise<any> - send immediately
+function Execute(functionName, ...args) {
+    const stringifedArgs = stringifyArgs(args);
+    return runCommandChain(ZeroMQ.execute(`${functionName}${stringifedArgs}`));
+}
+
+// Promise<void> - not sent immediately unless specified
+function Void(functionName, ...args) {
+    const stringifedArgs = stringifyArgs(args);
 
     commandQueue.push(ZeroMQ.void(`${functionName}${stringifedArgs}`));
     return Promise.resolve();
+}
+
+function VoidNow(functionName, ...args) {
+    const stringifedArgs = stringifyArgs(args);
+    return runCommandChain(ZeroMQ.void(`${functionName}${stringifedArgs}`));
 }
 
 module.exports = {
