@@ -84,6 +84,14 @@ function Void(functionName, ...args) {
 
 function VoidNow(functionName, ...args) {
     const stringifedArgs = stringifyArgs(args);
+    return runCommandChain(ZeroMQ.execute(`${functionName}${stringifedArgs}`)).then(_ => {
+        // discards return value
+        return;
+    });
+}
+
+function VoidAsync(functionName, ...args) {
+    const stringifedArgs = stringifyArgs(args);
     return runCommandChain(ZeroMQ.void(`${functionName}${stringifedArgs}`));
 }
 
