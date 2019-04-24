@@ -1,15 +1,16 @@
 const WebAssembly = require('../src/WebAssembly');
+const { performance } = require('perf_hooks');
 
-// You can use these the old-style promise way, like so:
-// WebAssembly.Initialise(`${__dirname}/../wasm-examples/basic-functions.wasm`, false).then(r => {
-//     console.log(r);
-//     process.exit();
-// });
-
-// Or, preferably, use the new-style async-await:
 async function run() {
-    const r = await WebAssembly.Initialise(`${__dirname}/../wasm-examples/basic-functions.wasm`, false);
-    console.log(r);
+    const start = performance.now();
+    const success = await WebAssembly.Initialise(`${__dirname}/../wasm-examples/basic-functions.wasm`, false);
+    const end = performance.now();
+    
+    success ? 
+        console.log("Successfully initialised WAVM.") : 
+        console.log("Failed to initialise WAVM.");
+
+    console.log(`Time taken to initialise: ${(end - start).toFixed(5)}`);
 }
 
 run().then(_ => process.exit());
